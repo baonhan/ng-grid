@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 01/08/2014 18:47
+* Compiled At: 01/08/2014 18:54
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -422,38 +422,66 @@ angular.module('ngGrid.services').factory('$sortService', ['$parse', function($p
             col,
             direction,
             d = data.slice(0);
-        data.sort(function (itemA, itemB) {
-            var tem = 0,
-                indx = 0,
-                sortFn;
-            while (tem === 0 && indx < l) {
-                col = sortInfo.columns[indx];
-                direction = sortInfo.directions[indx];
-                sortFn = sortService.getSortFn(col, d);
-                var propA = $parse(order[indx])(itemA);
-                var propB = $parse(order[indx])(itemB);
-                if ((!propA && propA !== 0) || (!propB && propB !== 0)) {
-                    if (!propB && !propA) {
-                        tem = 0;
-                    }
-                    else if (!propA) {
-                        tem = 1;
-                    }
-                    else if (!propB) {
-                        tem = -1;
-                    }
+
+
+        var start = (new Date()).getTime();
+
+        var sorted = false;
+        if ((navigator.appName == 'Microsoft Internet Explorer') && (sortInfo.columns.length == 1)) {
+            col = sortInfo.columns[0];
+            var sortFn = sortService.getSortFn(col, d);
+            if (sortFn === sortService.sortAlpha){
+                var origSortFn = Object.prototype.toString;
+                var fieldFn = $parse(order[0]);
+                Object.prototype.toString = function () {
+                    return fieldFn(this);
+                };
+                data.sort();
+                Object.prototype.toString = origSortFn;
+                var direction = sortInfo.directions[0];
+                if (direction != ASC) {
+                    data.reverse();
                 }
-                else {
-                    tem = sortFn(propA, propB);
+                sorted = true;
+            }
+        }
+
+        if (!sorted) {
+            data.sort(function (itemA, itemB) {
+                var tem = 0,
+                    indx = 0,
+                    sortFn;
+                while (tem === 0 && indx < l) {
+                    col = sortInfo.columns[indx];
+                    direction = sortInfo.directions[indx];
+                    sortFn = sortService.getSortFn(col, d);
+                    var propA = $parse(order[indx])(itemA);
+                    var propB = $parse(order[indx])(itemB);
+                    if ((!propA && propA !== 0) || (!propB && propB !== 0)) {
+                        if (!propB && !propA) {
+                            tem = 0;
+                        }
+                        else if (!propA) {
+                            tem = 1;
+                        }
+                        else if (!propB) {
+                            tem = -1;
+                        }
+                    }
+                    else {
+                        tem = sortFn(propA, propB);
+                    }
+                    indx++;
                 }
-                indx++;
-            }
-            if (direction === ASC) {
-                return tem;
-            } else {
-                return 0 - tem;
-            }
-        });
+                if (direction === ASC) {
+                    return tem;
+                } else {
+                    return 0 - tem;
+                }
+            });
+        }
+
+        alert('Time taken to sort: ' + ((new Date()).getTime() - start));
     };
     sortService.Sort = function(sortInfo, data) {
         if (sortService.isSorting) {
